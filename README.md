@@ -1,6 +1,5 @@
 ![alt text](logo.png "Logo")
 
-# SuperViou
 
 This is a cross-platform electron app (Windows & macOS) that takes a 4:3 aspect ratio video file, and transforms it to a 16:9 video using the  [GoPro SuperView](https://gopro.com/help/articles/question_answer/What-is-SuperView) method. This means that the image is not naively scaled, but a dynamic scaling is applied where the outer areas are stretched more while the center parts stay close to the original aspect rate.
 
