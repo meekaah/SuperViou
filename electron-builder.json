@@ -1,0 +1,38 @@
+{
+  "productName": "superviou",
+  "directories": {
+    "output": "release/"
+  },
+    "files": [
+        "**/*",
+        "!ffmpeg/**",
+        "!**/*.ts",
+        "!*.code-workspace",
+        "!package.json",
+        "!package-lock.json",
+        "!src/",
+        "!hooks/",
+        "!angular.json",
+        "!_config.yml",
+        "!tsconfig.json",
+        "!tslint.json"
+    ],
+  "win": {
+    "icon": "dist/favicon.png",
+    "target": [
+      "portable"
+    ],
+    "extraResources": [
+      "ffmpeg/win32/**"
+    ]
+  },
+  "mac": {
+    "icon": "dist/favicon.png",
+    "target": [
+      "dmg"
+    ],
+    "extraResources": [
+      "ffmpeg/darwin/**"
+    ]
+  }
+}
