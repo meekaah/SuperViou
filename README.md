@@ -1,4 +1,4 @@
-![alt text](src/logo.png "Logo)
+![alt text](logo.png "Logo)
 
 # SuperViou
 
