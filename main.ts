@@ -25,6 +25,14 @@ ffprobePath = path.resolve(basePath, 'ffmpeg', 'win32', 'ffprobe.exe');
 if (os.platform() == 'darwin'){
   ffmpegPath = path.resolve(basePath, 'ffmpeg', 'darwin', 'ffmpeg');
   ffprobePath = path.resolve(basePath, 'ffmpeg', 'darwin', 'ffprobe');
+
+  try {
+    fs.chmodSync(ffmpegPath, '755');
+    fs.chmodSync(ffprobePath, '755');
+  } catch (error) {
+    console.error('Unable to chmod ffmpeg && ffprobe: ', error);
+  }
+
 }
 
 console.log(`ffmpegPath: ${ffmpegPath} | exists: ${fs.existsSync(ffmpegPath)}`);
