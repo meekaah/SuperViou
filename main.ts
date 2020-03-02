@@ -6,6 +6,11 @@ import * as fs from 'fs';
 import * as os from 'os';
 import * as isDev from 'electron-is-dev';
 
+
+if (os.platform() === 'darwin' && !app.isInApplicationsFolder()){
+  app.moveToApplicationsFolder();
+}
+
 let win: BrowserWindow = null;
 const args = process.argv.slice(1),
     serve = args.some(val => val === '--serve');
