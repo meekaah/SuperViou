@@ -18,6 +18,7 @@ const args = process.argv.slice(1),
 let basePath:string = __dirname;
 let ffmpegPath:string;
 let ffprobePath:string;
+const tempDir = path.join(os.tmpdir(), 'superviou');
 
 if (!isDev && fs.existsSync(process.resourcesPath)){
   basePath = process.resourcesPath;
@@ -38,6 +39,10 @@ if (os.platform() == 'darwin'){
     console.error('Unable to chmod ffmpeg && ffprobe: ', error);
   }
 
+}
+
+if (!fs.existsSync(tempDir)){
+  fs.mkdirSync(tempDir);
 }
 
 console.log(`ffmpegPath: ${ffmpegPath} | exists: ${fs.existsSync(ffmpegPath)}`);
@@ -134,15 +139,15 @@ function processVideo(inputFile:string) {
       const duration = parseFloat(metadata.streams[0].duration);
       const bit_rate = metadata.streams[0].bit_rate;
       
-      const outX = parseInt((width/(4.0/3.0)*(16.0/9.0)).toString()) / 2 * 2 // multiplier of 2
+      const outX = parseInt((height*(16.0/9.0)).toString()) / 2 * 2 // multiplier of 2
       const outY = height;
       console.log(`Scaling input file ${inputFile} (codec: ${codec}, duration: ${duration} secs) from ${width}*${height} to ${outX}*${outY} using superview scaling`);
   
-      generateFilters(outX, outY, width).then(() => {
+      generateFilters(outX, outY, width).then((filters:any) => {
         
         console.log(`Filter files generated, re-encoding video at bitrate ${parseInt((bit_rate/1024/1024).toString())} MB/s`);
 
-        encode(inputFile, outputFile, codec, bit_rate, duration).then(() => {
+        encode(inputFile, outputFile, codec, bit_rate, duration, filters).then(() => {
           console.log("finished encoding!");
         }, (err) => {
           console.error("encoding error");
@@ -209,20 +214,33 @@ function probe(inputFile) {
   });
 }
 
+// Generate PGM P2 files for remap filter, see https://trac.ffmpeg.org/wiki/RemapFilter
 function generateFilters(outX:number, outY:number, width:number){
   
   win.webContents.send('EventFilterGenerationStarted');
   return new Promise((resolve, reject) => {
-    const wX = fs.createWriteStream(path.join(basePath, 'x.pgm'), {encoding: 'utf-8'});
-    const wY = fs.createWriteStream(path.join(basePath, 'y.pgm'), {encoding: 'utf-8'});
+
+    const xFilterPath = path.join(tempDir, `x-${outX}-${outY}-${width}.pgm`)
+    const yFilterPath = path.join(tempDir, `y-${outX}-${outY}-${width}.pgm`);
+
+    if (fs.existsSync(xFilterPath) && fs.existsSync(yFilterPath)){
+      resolve({x: xFilterPath, y:yFilterPath});
+      return;
+    }
+
+    const wX = fs.createWriteStream(xFilterPath, {encoding: 'utf-8'});
+    const wY = fs.createWriteStream(yFilterPath, {encoding: 'utf-8'});
     wX.write(`P2 ${outX} ${outY} 65535\n`);
     wY.write(`P2 ${outX} ${outY} 65535\n`);
-    
+    let i = 0;
     for (let y = 0; y < outY; y++) {
       for (let x = 0; x < outX; x++) {
-        const tx = (parseFloat(x.toString())/parseFloat(outX.toString()) - 0.5) * 2.0;
-        const sx = parseFloat(x.toString()) - parseFloat((outX-width).toString())/2.0;
-        let offset = Math.pow(tx, 2) * (parseFloat((outX-width).toString()) / 2.0);
+
+        const widthDiff = outX-width;
+        const sx =  x - widthDiff / 2.0; // x - width diff/2
+        const tx = (x / outX - 0.5) * 2.0; // (x/width - 0.5) * 2
+        let offset = Math.pow(tx, 2) * (widthDiff / 2.0);    // tx^2 * width diff/2
+        
         if (tx < 0) {
           offset *= -1;
         }
@@ -231,11 +249,12 @@ function generateFilters(outX:number, outY:number, width:number){
         wX.write(" ");
         wY.write(y.toString());
         wY.write(" ");
+        ++i;
       }
       wX.write("\n");
       wY.write("\n");
     }  
-    
+    console.log("iterations", i);
     var xEnd = new Promise((res, reject) => {
       wX.end(() => {
         console.log("done writing X filter");
@@ -252,17 +271,17 @@ function generateFilters(outX:number, outY:number, width:number){
 
     Promise.all([xEnd, yEnd]).then(() => {
       win.webContents.send('EventFilterGenerationFinished');
-      resolve();
+      resolve({x: xFilterPath, y: yFilterPath});
     });
   });
 }
 
-function encode(inputFile, outputFile, codec, bit_rate, duration){
+function encode(inputFile, outputFile, codec, bit_rate, duration, filters){
   
   win.webContents.send('EventEncodingStarted');
   return new Promise((resolve, reject) => {
 
-    let args = ["-hide_banner", "-progress", "pipe:1", "-loglevel", "panic", "-y", "-re", "-i", inputFile, "-i", path.resolve(basePath, 'x.pgm'), "-i", path.resolve(basePath, 'y.pgm'), "-filter_complex", "remap,format=yuv444p,format=yuv420p", "-c:v", codec, "-b:v", bit_rate, "-c:a", "copy", "-x265-params", "log-level=error", outputFile];
+    let args = ["-hide_banner", "-progress", "pipe:1", "-loglevel", "panic", "-y", "-re", "-i", inputFile, "-i", filters.x, "-i", filters.y, "-filter_complex", "remap,format=yuv444p,format=yuv420p", "-c:v", codec, "-b:v", bit_rate, "-c:a", "aac", "-x265-params", "log-level=error", outputFile];
     
     const ffmpegExec = spawn(ffmpegPath, args);
     
@@ -270,7 +289,7 @@ function encode(inputFile, outputFile, codec, bit_rate, duration){
       data.toString().split('\n').forEach(line => {
         if (line.startsWith('out_time_ms=')){
           const time = parseFloat(line.split('=')[1]);
-          const progress:number = time/(duration*10000);
+          const progress:number = Math.min(time/(duration*10000), 100);
 
           console.log(`Encoding progress: ${progress}%`)
           win.webContents.send('EventEncodingProgress', progress);
