@@ -5,6 +5,7 @@ import { spawn }  from 'child_process';
 import * as fs from 'fs';
 import * as os from 'os';
 import * as isDev from 'electron-is-dev';
+import { SettingsModel } from './src/app/shared/SettingsModel';
 
 
 if (os.platform() === 'darwin' && !app.isInApplicationsFolder()){
@@ -48,9 +49,9 @@ if (!fs.existsSync(tempDir)){
 console.log(`ffmpegPath: ${ffmpegPath} | exists: ${fs.existsSync(ffmpegPath)}`);
 console.log(`ffprobePath: ${ffprobePath} | exists: ${fs.existsSync(ffprobePath)}`);
 
-ipcMain.on('CommandEncode', (event, arg) => {
-  console.log(`received an encodeCommand with arg: ${arg}`);
-  processVideo(arg);
+ipcMain.on('CommandEncode', (event, file, settings:SettingsModel) => {
+  console.log('received an encodeCommand with arg:', file, settings);
+  processVideo(file, settings);
 })
 
 function createWindow(): BrowserWindow {
@@ -58,7 +59,7 @@ function createWindow(): BrowserWindow {
   // Create the browser window.
   win = new BrowserWindow({
     width: 600,
-    height: 470,
+    height: 490,
     resizable: false,
     webPreferences: {
       nodeIntegration: true,
@@ -125,7 +126,7 @@ try {
   // throw e;
 }
 
-function processVideo(inputFile:string) {
+function processVideo(inputFile:string, settings:SettingsModel) {
   
   var outputFile = replaceExt(inputFile);
 
@@ -138,7 +139,11 @@ function processVideo(inputFile:string) {
       const height = metadata.streams[0].height;
       const duration = parseFloat(metadata.streams[0].duration);
       const bit_rate = metadata.streams[0].bit_rate;
-      
+
+      if (settings.upscale === -1){
+        settings.upscale = height;
+      }
+
       const outX = parseInt((height*(16.0/9.0)).toString()) / 2 * 2 // multiplier of 2
       const outY = height;
       console.log(`Scaling input file ${inputFile} (codec: ${codec}, duration: ${duration} secs) from ${width}*${height} to ${outX}*${outY} using superview scaling`);
@@ -147,7 +152,7 @@ function processVideo(inputFile:string) {
         
         console.log(`Filter files generated, re-encoding video at bitrate ${parseInt((bit_rate/1024/1024).toString())} MB/s`);
 
-        encode(inputFile, outputFile, codec, bit_rate, duration, filters).then(() => {
+        encode(inputFile, outputFile, codec, bit_rate, duration, filters, settings).then(() => {
           console.log("finished encoding!");
         }, (err) => {
           console.error("encoding error");
@@ -215,13 +220,13 @@ function probe(inputFile) {
 }
 
 // Generate PGM P2 files for remap filter, see https://trac.ffmpeg.org/wiki/RemapFilter
-function generateFilters(outX:number, outY:number, width:number){
+function generateFilters(newWidth:number, newHeight:number, originalWidth:number){
   
   win.webContents.send('EventFilterGenerationStarted');
   return new Promise((resolve, reject) => {
 
-    const xFilterPath = path.join(tempDir, `x-${outX}-${outY}-${width}.pgm`)
-    const yFilterPath = path.join(tempDir, `y-${outX}-${outY}-${width}.pgm`);
+    const xFilterPath = path.join(tempDir, `x-${newWidth}-${newHeight}-${originalWidth}.pgm`)
+    const yFilterPath = path.join(tempDir, `y-${newWidth}-${newHeight}-${originalWidth}.pgm`);
 
     if (fs.existsSync(xFilterPath) && fs.existsSync(yFilterPath)){
       resolve({x: xFilterPath, y:yFilterPath});
@@ -230,15 +235,15 @@ function generateFilters(outX:number, outY:number, width:number){
 
     const wX = fs.createWriteStream(xFilterPath, {encoding: 'utf-8'});
     const wY = fs.createWriteStream(yFilterPath, {encoding: 'utf-8'});
-    wX.write(`P2 ${outX} ${outY} 65535\n`);
-    wY.write(`P2 ${outX} ${outY} 65535\n`);
+    wX.write(`P2 ${newWidth} ${newHeight} 65535\n`);
+    wY.write(`P2 ${newWidth} ${newHeight} 65535\n`);
     let i = 0;
-    for (let y = 0; y < outY; y++) {
-      for (let x = 0; x < outX; x++) {
+    for (let y = 0; y < newHeight; y++) {
+      for (let x = 0; x < newWidth; x++) {
 
-        const widthDiff = outX-width;
+        const widthDiff = newWidth-originalWidth;
         const sx =  x - widthDiff / 2.0; // x - width diff/2
-        const tx = (x / outX - 0.5) * 2.0; // (x/width - 0.5) * 2
+        const tx = (x / newWidth - 0.5) * 2.0; // (x/width - 0.5) * 2
         let offset = Math.pow(tx, 2) * (widthDiff / 2.0);    // tx^2 * width diff/2
         
         if (tx < 0) {
@@ -276,12 +281,11 @@ function generateFilters(outX:number, outY:number, width:number){
   });
 }
 
-function encode(inputFile, outputFile, codec, bit_rate, duration, filters){
+function encode(inputFile:string, outputFile:string, codec:string, bit_rate:number, duration: number, filters, settings:SettingsModel){
   
   win.webContents.send('EventEncodingStarted');
   return new Promise((resolve, reject) => {
-
-    let args = ["-hide_banner", "-progress", "pipe:1", "-loglevel", "panic", "-y", "-re", "-i", inputFile, "-i", filters.x, "-i", filters.y, "-filter_complex", "remap,format=yuv444p,format=yuv420p", "-c:v", codec, "-b:v", bit_rate, "-c:a", "aac", "-x265-params", "log-level=error", outputFile];
+    let args = ["-hide_banner", "-progress", "pipe:1", "-loglevel", "panic", "-y", "-re", "-i", inputFile, "-i", filters.x, "-i", filters.y, "-filter_complex", `remap,format=yuv444p,format=yuv420p,scale=-1:${settings.upscale}`, "-c:v", codec, "-b:v", bit_rate, "-c:a", "aac", "-x265-params", "log-level=error", outputFile];
     
     const ffmpegExec = spawn(ffmpegPath, args);
     

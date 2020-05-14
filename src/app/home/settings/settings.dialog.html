@@ -1,0 +1,14 @@
+<h1 mat-dialog-title>Settings</h1>
+<div mat-dialog-content>
+	<mat-form-field>
+		<mat-label>Upscale output</mat-label>
+		<mat-select [(value)]="settings.upscale">
+			<mat-option *ngFor="let upscale of upscaleList" [value]="upscale.value">
+			{{ upscale.label }}
+		  </mat-option>
+		</mat-select>
+	</mat-form-field>
+</div>
+<div mat-dialog-actions >
+  <button mat-button [mat-dialog-close]="settings">Close</button>
+</div>

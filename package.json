@@ -1,8 +1,8 @@
 {
   "name": "superviou",
   "version": "1.0.0",
-  "description": "Angular 9 with Electron (Typescript + SASS + Hot Reload)",
-  "homepage": "https://fake.com/superviou",
+  "description": "Convert 4:3 ratio video into a dynamically stretched SuperView-like 16:9 video",
+  "homepage": "https://github.com/meekaah/SuperViou",
   "author": {
     "name": "MeeKaaH"
   },

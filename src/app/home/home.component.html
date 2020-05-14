@@ -39,6 +39,10 @@
 	</mat-card-content>
 </mat-card>
 
+<div class="settingsContainer">
+	<button mat-raised-button (click)="openSettings()">Settings</button>
+</div>
+
 <div class="encodeContainer">
 	<button mat-raised-button color="primary" [disabled]="!file" (click)="processFile()">Go !</button>
 </div>

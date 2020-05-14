@@ -24,7 +24,7 @@
             ],
             "styles": [
               "src/styles.scss",
-              "node_modules/@angular/material/prebuilt-themes/pink-bluegrey.css"
+              "src/theme.scss"
             ],
             "scripts": [],
             "customWebpackConfig": {

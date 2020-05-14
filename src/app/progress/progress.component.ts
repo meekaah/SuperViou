@@ -1,6 +1,7 @@
 import { Component, OnInit, ChangeDetectorRef, NgZone } from '@angular/core';
-import { ActivatedRoute, Router } from '@angular/router';
+import { ActivatedRoute, Router, NavigationExtras } from '@angular/router';
 import { ElectronService } from '../core/services';
+import { SettingsModel } from '../shared/SettingsModel';
 
 @Component({
   selector: 'app-progress',
@@ -15,17 +16,26 @@ export class ProgressComponent implements OnInit {
     private chRef: ChangeDetectorRef,
     private router: Router,
     private zone: NgZone
-  ) { }
+  ) { 
+
+    const navigation = this.router.getCurrentNavigation();
+    const state = navigation.extras.state as {
+      file: string,
+      settings: SettingsModel
+    };
+
+    this.inputFile = state.file;
+    this.settings = state.settings;
+  }
 
   inputFile: string;
+  settings: SettingsModel;
   mode: string = "determinate"; //determinate | indeterminate
   progress: number = 0;
   message: string = "Step 1 / 4 : Initializing";
 
   ngOnInit(): void {
-    this.route.queryParams.subscribe(params => {
-      this.inputFile = params['file'] || '';
-    });
+
 
     if (this.electronService.isElectron) {
       this.electronService.ipcRenderer.on('EventGetCodecsStarted', (event, arg) => {
@@ -129,13 +139,18 @@ export class ProgressComponent implements OnInit {
         });
       });
 
-      this.electronService.ipcRenderer.send('CommandEncode', this.inputFile);
+      this.electronService.ipcRenderer.send('CommandEncode', this.inputFile, this.settings);
     }
 
   }
 
   close(): void {
-    this.router.navigate(['']);
+    const navigationExtras: NavigationExtras = {
+      state: {
+        settings: this.settings
+      }
+    };
+    this.router.navigate(['/'], navigationExtras);
   }
 
 }

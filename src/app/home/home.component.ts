@@ -1,5 +1,8 @@
 import { Component, OnInit } from '@angular/core';
-import { Router } from '@angular/router';
+import { Router, NavigationExtras } from '@angular/router';
+import { MatDialog } from '@angular/material/dialog';
+import { SettingsDialog } from './settings/settings.dialog';
+import { SettingsModel } from '../shared/SettingsModel';
 
 @Component({
   selector: 'app-home',
@@ -8,13 +11,38 @@ import { Router } from '@angular/router';
 })
 export class HomeComponent implements OnInit {
   file: File;
+  settings: SettingsModel = {
+    upscale: -1
+  };
   constructor(
-    private router: Router 
+    private router: Router,
+    private dialog: MatDialog
   ) { 
     
+    const navigation = this.router.getCurrentNavigation();
+    const state = navigation.extras.state as {
+      settings: SettingsModel
+    };
+    
+    if (state){
+      this.settings = state.settings;
+    }
   }
 
   ngOnInit(): void {
+  }
+
+  openSettings(){
+    const dialogRef = this.dialog.open(SettingsDialog, {
+      width: '250px',
+      data: this.settings
+    }); 
+
+    dialogRef.afterClosed().subscribe(result => {
+      if (result){
+        this.settings = result;
+      }
+    });
   }
 
   onFileDropped($event) {
@@ -38,6 +66,12 @@ export class HomeComponent implements OnInit {
   processFile(){
     
     console.log("Processing : ", this.file);
-    this.router.navigate(['/progress/'], { queryParams: { file: this.file.path } });
+    const navigationExtras: NavigationExtras = {
+      state: {
+        file: this.file.path,
+        settings: this.settings
+      }
+    };
+    this.router.navigate(['/progress/'], navigationExtras);
   }
 }
