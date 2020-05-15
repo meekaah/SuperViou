@@ -12,6 +12,7 @@ export class SettingsDialog {
     { value: -1, label: "Unchanged"},
     { value: 1080, label: "1080p"},
     { value: 1440, label: "1440p"},
+    { value: 2160, label: "4K"},
   ]
   constructor(
     public dialogRef: MatDialogRef<SettingsDialog>,
