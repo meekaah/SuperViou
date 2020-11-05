@@ -15,3 +15,8 @@ This is not a 1-1 copy of the GoPro algorithm, but an attempt to reach similar q
 Here is a quick animation showing the scaling, note how the text in the center stays the same:
 
 ![alt text](sample.gif "Sample of the scaling result")
+
+
+And if you feel like it, send me a beer! It's always appreciated!
+
+[![Donate](https://img.shields.io/badge/Donate-PayPal-green.svg)](https://www.paypal.com/cgi-bin/webscr?cmd=_donations&business=JS7RFTTHXQY24&currency_code=EUR)
