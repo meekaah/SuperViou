@@ -10,6 +10,11 @@ This is not a 1-1 copy of the GoPro algorithm, but an attempt to reach similar q
 
 * Credits for the idea go to *Banelle*, who wrote the [initial (Python) implementation](https://intofpv.com/t-using-free-command-line-sorcery-to-fake-superview).
 
+
+<img src="https://sguru.org/wp-content/uploads/2018/02/2000px-YouTube_Logo_2017.svg_.png" width="100"/>
+
+[Subscribe on YouTube](https://www.youtube.com/MeeKaaH)
+
 ![alt text](preview.gif "Screengrab of the app")
 
 Here is a quick animation showing the scaling, note how the text in the center stays the same:
@@ -20,7 +25,3 @@ Here is a quick animation showing the scaling, note how the text in the center s
 And if you feel like it, send me a beer! It's always appreciated!
 
 [![Donate](https://img.shields.io/badge/Donate-PayPal-green.svg)](https://www.paypal.com/cgi-bin/webscr?cmd=_donations&business=JS7RFTTHXQY24&currency_code=EUR)
-
-<img src="https://sguru.org/wp-content/uploads/2018/02/2000px-YouTube_Logo_2017.svg_.png" width="100"/>
-
-[Subscribe on YouTube](https://www.youtube.com/MeeKaaH)
